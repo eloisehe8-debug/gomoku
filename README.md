@@ -1,4 +1,4 @@
-# Gomoku · 五子棋
+# Gomoku
 
 A two-player Gomoku (five in a row) game that runs in the browser. Single HTML file, no dependencies.
 
