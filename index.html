@@ -7,9 +7,9 @@
 <style>
   :root {
     /* Nippon colors: 基底 #FEDFE1 #D7C4BB #DC9FB4 · 关键色 #FFFFFF #A5DEE4 #9E7A7A */
-    --bg: #FEDFE1; --panel: #FFFFFF; --text: #4f3b3c; --muted: #9E7A7A; --line: #D7C4BB;
-    --wood: #F4C9CF; --wood-dark: #DC9FB4; --grid: #8a6566; --accent: #9E7A7A; --accent-dark: #876464; --key: #A5DEE4;
-    --shade: rgba(158, 122, 122, .35);
+    --bg: #F3EEEA; --panel: #FFFFFF; --text: #4f3b3c; --muted: #9E7A7A; --line: #D7C4BB;
+    --wood: #FEE9EA; --wood-dark: #FEDFE1; --grid: #a58283; --accent: #9E7A7A; --btn: #D7C4BB; --btn-dark: #c8b2a7; --key: #A5DEE4;
+    --shade: rgba(158, 122, 122, .22);
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #3b2d2f; --panel: #4a393b; --text: #fdeef0; --muted: #D7C4BB; --line: #6a5254; --shade: rgba(0, 0, 0, .35); }
@@ -30,9 +30,9 @@
 
   .modes { width: min(100%, 620px); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px; }
   .seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
-  .seg button { border: 0; padding: 5px 16px; font-size: 13px; border-radius: 999px; background: transparent; color: var(--accent); }
+  .seg button { border: 0; padding: 5px 16px; font-size: 13px; border-radius: 999px; background: transparent; color: var(--text); }
   .seg button:hover:not(:disabled) { background: var(--bg); }
-  .seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover { background: var(--accent); color: #fff; }
+  .seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover { background: var(--btn); color: var(--text); }
   .seg button:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .player input[readonly] { cursor: default; }
   .online { width: min(100%, 620px); margin-bottom: 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -74,11 +74,11 @@
   .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
   button {
     font: inherit; padding: 8px 18px; border-radius: 10px; cursor: pointer;
-    border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600;
+    border: 1px solid var(--btn); background: var(--btn); color: var(--text); font-weight: 600;
   }
-  button:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+  button:hover:not(:disabled) { background: var(--btn-dark); border-color: var(--btn-dark); }
   button:disabled { opacity: .45; cursor: default; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary { background: var(--btn); border-color: var(--btn); color: var(--text); font-weight: 600; }
   .info { margin-top: 14px; color: var(--muted); font-size: 13px; text-align: center; max-width: 520px; }
 
   .overlay {
@@ -362,6 +362,10 @@ function stone(x, y, who, alpha) {
   else { g.addColorStop(0, "#e3f6f8"); g.addColorStop(0.55, "#A5DEE4"); g.addColorStop(1, "#80c2cb"); }  // #A5DEE4
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  if (who === 1) {   // 白棋在淡粉棋盘上加一圈细边
+    ctx.shadowColor = "transparent"; ctx.strokeStyle = "rgba(158,122,122,.45)"; ctx.lineWidth = Math.max(1, cell * 0.03);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
