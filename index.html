@@ -13,6 +13,7 @@
     :root { --bg: #1c1916; --panel: #27231f; --text: #efe8dd; --muted: #a39887; --line: #3a342d; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; min-height: 100%; }
   body {
     background: var(--bg); color: var(--text);
@@ -25,6 +26,12 @@
   .lang { padding: 4px 12px; font-size: 13px; border-radius: 999px; }
   h1 small { font-weight: 400; color: var(--muted); font-size: 14px; letter-spacing: 0; margin-left: 6px; }
 
+  .modes { width: min(100%, 620px); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px; }
+  .seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
+  .seg button { border: 0; padding: 5px 16px; font-size: 13px; border-radius: 999px; background: transparent; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .seg button:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .player input[readonly] { cursor: default; }
   .players { display: flex; gap: 12px; width: min(100%, 620px); margin-bottom: 14px; }
   .player {
     flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
@@ -83,6 +90,18 @@
     <button class="lang" id="lang" aria-label="Switch language / 切换语言"></button>
   </header>
 
+  <div class="modes">
+    <div class="seg" id="modeSeg" role="group">
+      <button data-mode="1p" data-i18n="onePlayer"></button>
+      <button data-mode="2p" data-i18n="twoPlayers"></button>
+    </div>
+    <div class="seg" id="diffSeg" role="group">
+      <button data-diff="easy" data-i18n="easy"></button>
+      <button data-diff="medium" data-i18n="medium"></button>
+      <button data-diff="hard" data-i18n="hard"></button>
+    </div>
+  </div>
+
   <div class="players">
     <div class="player" id="p1">
       <div class="stone black"></div>
@@ -115,7 +134,7 @@
     <button id="restart" data-i18n="restart"></button>
     <button id="resetScore" data-i18n="resetScore"></button>
   </div>
-  <div class="info" data-i18n="info"></div>
+  <div class="info" id="info"></div>
 
 <script>
 const N = 15;                       // 15 × 15 路棋盘
@@ -125,62 +144,90 @@ const $ = (id) => document.getElementById(id);
 
 const I18N = {
   en: {
-    title: "Gomoku", subtitle: "Five in a Row · 2 players", black: "Black", white: "White",
+    title: "Gomoku", subtitle: "Five in a Row", black: "Black", white: "White", you: "You", bot: "Bot",
+    onePlayer: "1 Player", twoPlayers: "2 Players", easy: "Easy", medium: "Medium", hard: "Hard",
     undo: "Undo", restart: "Restart", resetScore: "Reset score", again: "Play again", toggle: "中文",
-    info: "Take turns placing stones on the intersections. The first to get five in a row horizontally, vertically or diagonally wins. The loser moves first next game. Click a name to edit it.",
+    info2: "Take turns placing stones on the intersections. The first to get five in a row horizontally, vertically or diagonally wins. The loser moves first next game. Click a name to edit it.",
+    info1: "You play black against the bot. Get five in a row horizontally, vertically or diagonally to win. The loser moves first next game. Undo takes back your last move and the bot's reply.",
     nameLabel: (n) => `${n} player name`,
     turn: (n, k) => `${n} to move · move ${k}`,
-    wins: (n) => `${n} wins!`,
+    yourTurn: (k) => `Your move · move ${k}`, botTurn: "Bot is thinking…",
+    wins: (n) => `${n} wins!`, youWin: "You win!", botWin: "Bot wins!",
     winSub: (k, a, b, f) => `${k} moves · score ${a} : ${b} · ${f} moves first next game`,
+    winSubBot: (k, a, b, youFirst) => `${k} moves · score ${a} : ${b} · ${youFirst ? "you move" : "the bot moves"} first next game`,
     draw: "Draw", drawSub: "The board is full. Nobody wins.",
   },
   zh: {
-    title: "五子棋", subtitle: "Gomoku · 双人对战", black: "黑方", white: "白方",
+    title: "五子棋", subtitle: "Gomoku", black: "黑方", white: "白方", you: "你", bot: "电脑",
+    onePlayer: "单人", twoPlayers: "双人", easy: "简单", medium: "中等", hard: "困难",
     undo: "悔棋", restart: "重新开始", resetScore: "清空比分", again: "再来一局", toggle: "EN",
-    info: "两人轮流在交叉点落子，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。点击名字可以修改。",
+    info2: "两人轮流在交叉点落子，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。点击名字可以修改。",
+    info1: "你执黑与电脑对弈，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。悔棋会同时撤回你和电脑的上一步。",
     nameLabel: (n) => `${n}名字`,
     turn: (n, k) => `轮到 ${n} 落子 · 第 ${k} 手`,
-    wins: (n) => `${n} 获胜！`,
+    yourTurn: (k) => `轮到你落子 · 第 ${k} 手`, botTurn: "电脑思考中…",
+    wins: (n) => `${n} 获胜！`, youWin: "你赢了！", botWin: "电脑获胜！",
     winSub: (k, a, b, f) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局 ${f} 先手`,
+    winSubBot: (k, a, b, youFirst) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局${youFirst ? "你" : "电脑"}先手`,
     draw: "平局", drawSub: "棋盘下满了，不分胜负",
   },
 };
-let lang = load("gomoku-lang", "en");
-if (!I18N[lang]) lang = "en";
+
+function load(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+}
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+let lang = load("gomoku-lang", "en"); if (!I18N[lang]) lang = "en";
+let mode = load("gomoku-mode", "2p"); if (mode !== "1p" && mode !== "2p") mode = "2p";
+let diff = load("gomoku-diff", "medium"); if (!["easy", "medium", "hard"].includes(diff)) diff = "medium";
 let t = I18N[lang];
-const isDefaultName = (v, who) => !v.trim() || Object.values(I18N).some((d) => d[who === 1 ? "black" : "white"] === v.trim());
+const vsBot = () => mode === "1p";
+const scoresKey = () => vsBot() ? "gomoku-scores-bot-" + diff : "gomoku-scores";
 
-let board, moves, current, winner, winLine, hover, first = 1;
-let scores = load("gomoku-scores", { 1: 0, 2: 0 });
+// 默认名字（任何语言里的 黑方/白方/你/电脑）不存，切语言时跟着换
+const DEFAULTS = new Set(Object.values(I18N).flatMap((d) => [d.black, d.white, d.you, d.bot]));
+const isDefaultName = (v) => !v.trim() || DEFAULTS.has(v.trim());
+
+let board, moves, current, winner, winLine, hover, first = 1, botTimer = null;
+let scores = load(scoresKey(), { 1: 0, 2: 0 });
 const names = load("gomoku-names", { 1: "", 2: "" });
-$("name1").value = names[1]; $("name2").value = names[2];
+for (const i of [1, 2]) if (isDefaultName(names[i] || "")) names[i] = "";
 
-function applyLang() {
+function defaultName(who) { return vsBot() ? (who === 1 ? t.you : t.bot) : (who === 1 ? t.black : t.white); }
+function name(who) {
+  if (vsBot() && who === 2) return t.bot;
+  return names[who] || defaultName(who);
+}
+
+function renderChrome() {
   t = I18N[lang];
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t[el.dataset.i18n]; });
   $("lang").textContent = t.toggle;
+  $("info").textContent = vsBot() ? t.info1 : t.info2;
+  document.querySelectorAll("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === mode));
+  document.querySelectorAll("#diffSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.diff === diff));
+  $("diffSeg").hidden = !vsBot();
   for (const i of [1, 2]) {
-    const def = i === 1 ? t.black : t.white;
-    if (isDefaultName($("name" + i).value, i)) $("name" + i).value = def;
-    $("name" + i).setAttribute("aria-label", t.nameLabel(def));
+    const inp = $("name" + i), botSide = vsBot() && i === 2;
+    if (document.activeElement !== inp) inp.value = botSide ? t.bot : (names[i] || defaultName(i));
+    inp.readOnly = botSide;
+    inp.setAttribute("aria-label", t.nameLabel(defaultName(i)));
   }
   update();
   if ($("overlay").classList.contains("show")) showWin();
 }
 
-function load(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
-}
-function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
-
 // 玩家 1 永远执黑、玩家 2 永远执白；谁先手由 first 决定（输家下局先手）
 function newGame() {
+  clearTimeout(botTimer); botTimer = null;
   board = Array.from({ length: N }, () => Array(N).fill(0));
   moves = []; winner = 0; winLine = null; hover = null;
   current = first;
   $("overlay").classList.remove("show");
   update(); draw();
+  maybeBot();
 }
 
 // ---------- 绘制 ----------
@@ -199,7 +246,6 @@ function pos(i) { return pad + i * cell; }
 function draw() {
   if (!size) return;
   ctx.clearRect(0, 0, size, size);
-  // 网格
   ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--grid");
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -210,22 +256,17 @@ function draw() {
   ctx.stroke();
   ctx.lineWidth = 2;
   ctx.strokeRect(pos(0), pos(0), pos(N - 1) - pos(0), pos(N - 1) - pos(0));
-  // 星位
   ctx.fillStyle = ctx.strokeStyle;
   for (const [x, y] of [[3, 3], [11, 3], [7, 7], [3, 11], [11, 11]]) {
     ctx.beginPath(); ctx.arc(pos(x), pos(y), cell * 0.1, 0, Math.PI * 2); ctx.fill();
   }
-  // 棋子
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (board[y][x]) stone(x, y, board[y][x], 1);
-  // 悬停预览
-  if (hover && !winner && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
-  // 最后一手标记
+  if (hover && !winner && !botTurn() && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
   const last = moves[moves.length - 1];
   if (last && !winLine) {
     ctx.fillStyle = "#d9442b";
     ctx.beginPath(); ctx.arc(pos(last.x), pos(last.y), cell * 0.11, 0, Math.PI * 2); ctx.fill();
   }
-  // 胜利连线
   if (winLine) {
     const a = winLine[0], b = winLine[winLine.length - 1];
     ctx.strokeStyle = "#d9442b"; ctx.lineWidth = cell * 0.12; ctx.lineCap = "round";
@@ -246,8 +287,9 @@ function stone(x, y, who, alpha) {
 }
 
 // ---------- 规则 ----------
+const DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
 function checkWin(x, y, who) {
-  for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+  for (const [dx, dy] of DIRS) {
     const line = [{ x, y }];
     for (const s of [1, -1]) {
       let nx = x + dx * s, ny = y + dy * s;
@@ -268,7 +310,7 @@ function play(x, y) {
   const line = checkWin(x, y, current);
   if (line) {
     winner = current; winLine = line;
-    scores[winner]++; save("gomoku-scores", scores);
+    scores[winner]++; save(scoresKey(), scores);
     first = winner === 1 ? 2 : 1;
     setTimeout(showWin, 450);
   } else if (moves.length === N * N) {
@@ -277,35 +319,140 @@ function play(x, y) {
     current = current === 1 ? 2 : 1;
   }
   update(); draw();
+  maybeBot();
 }
 
 function undo() {
-  if (!moves.length || winner) return;
-  const m = moves.pop();
-  board[m.y][m.x] = 0; current = m.who;
+  if (winner || botTurn()) return;
+  if (vsBot()) {
+    if (!moves.some((m) => m.who === 1)) return;
+    while (moves.length && moves[moves.length - 1].who === 2) { const m = moves.pop(); board[m.y][m.x] = 0; }
+    const m = moves.pop(); board[m.y][m.x] = 0; current = 1;
+  } else {
+    if (!moves.length) return;
+    const m = moves.pop(); board[m.y][m.x] = 0; current = m.who;
+  }
   update(); draw();
 }
 
-// ---------- 界面 ----------
-function name(who) { return $("name" + who).value.trim() || (who === 1 ? t.black : t.white); }
+// ---------- 电脑 ----------
+// 以落子点为中心取 9 格（越界算对方），按棋型打分
+const PATTERNS = [
+  [1e7, ["XXXXX"]],
+  [1e5, ["_XXXX_"]],
+  [1e4, ["XXXX_", "_XXXX", "XX_XX", "X_XXX", "XXX_X"]],
+  [5e3, ["_XXX_", "_XX_X_", "_X_XX_"]],
+  [500, ["XXX__", "__XXX", "XX_X_", "_X_XX", "X_XX_", "_XX_X", "XX__X", "X__XX", "X_X_X"]],
+  [300, ["__XX__", "_XX__", "__XX_", "_X_X_"]],
+  [30, ["XX___", "___XX", "_X__X", "X__X_"]],
+];
+function lineAt(x, y, dx, dy, who) {
+  let s = "";
+  for (let k = -4; k <= 4; k++) {
+    if (k === 0) { s += "X"; continue; }
+    const nx = x + dx * k, ny = y + dy * k;
+    if (nx < 0 || ny < 0 || nx >= N || ny >= N) s += "O";
+    else s += board[ny][nx] === who ? "X" : board[ny][nx] === 0 ? "_" : "O";
+  }
+  return s;
+}
+function dirScore(s) {
+  for (const [score, pats] of PATTERNS) {
+    for (const p of pats) {
+      for (let i = s.indexOf(p); i !== -1; i = s.indexOf(p, i + 1)) if (i <= 4 && i + p.length > 4) return score;
+    }
+  }
+  return 1;
+}
+function pointScore(x, y, who) {
+  let sum = 0, fours = 0, threes = 0;
+  for (const [dx, dy] of DIRS) {
+    const sc = dirScore(lineAt(x, y, dx, dy, who));
+    if (sc >= 1e7) return 1e7;
+    if (sc >= 1e4) fours++; else if (sc === 5e3) threes++;
+    sum += sc;
+  }
+  if (fours >= 2 || (fours && threes)) sum += 1e5;   // 双四、四三 = 必胜
+  else if (threes >= 2) sum += 2e4;                   // 双活三
+  return sum;
+}
+function candidates() {
+  const out = [];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (board[y][x]) continue;
+    let near = false;
+    for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < N && ny < N && board[ny][nx]) { near = true; break; }
+    }
+    if (near) out.push({ x, y });
+  }
+  return out;
+}
+function rank(me, defW) {
+  const opp = me === 1 ? 2 : 1, c = (N - 1) / 2;
+  return candidates().map((p) => {
+    const a = pointScore(p.x, p.y, me), d = pointScore(p.x, p.y, opp);
+    let s = a >= 1e7 ? 1e9 : d >= 1e7 ? 1e8 : a + defW * d;
+    s += 5 - (Math.abs(p.x - c) + Math.abs(p.y - c)) * 0.3 + Math.random();
+    return { ...p, s };
+  }).sort((p, q) => q.s - p.s);
+}
+function botPick() {
+  if (!moves.length) return { x: 7, y: 7 };
+  if (diff === "easy") {
+    const r = rank(2, 0.6);
+    if (r[0].s >= 1e9 && Math.random() < 0.7) return r[0];
+    return r[Math.floor(Math.random() * Math.min(4, r.length))];
+  }
+  if (diff === "medium") return rank(2, 0.9)[0];
+  // 困难：取前 10 个候选，再看对手最好的回应
+  const top = rank(2, 1.0).slice(0, 10);
+  if (top[0].s >= 1e8) return top[0];
+  let best = top[0], bestVal = -Infinity;
+  for (const p of top) {
+    board[p.y][p.x] = 2;
+    const reply = rank(1, 1.0)[0];
+    board[p.y][p.x] = 0;
+    const val = p.s - 0.8 * (reply ? reply.s : 0);
+    if (val > bestVal) { bestVal = val; best = p; }
+  }
+  return best;
+}
+function botTurn() { return vsBot() && !winner && current === 2; }
+function maybeBot() {
+  if (!botTurn() || botTimer) return;
+  botTimer = setTimeout(() => {
+    botTimer = null;
+    if (!botTurn()) return;
+    const p = botPick();
+    play(p.x, p.y);
+  }, 380);
+}
 
+// ---------- 界面 ----------
 function update() {
+  if (!moves) return;
   $("score1").textContent = scores[1]; $("score2").textContent = scores[2];
   $("p1").classList.toggle("active", !winner && current === 1);
   $("p2").classList.toggle("active", !winner && current === 2);
   const st = $("status");
   st.classList.toggle("win", winner > 0);
-  st.textContent = winner > 0 ? t.wins(name(winner))
-    : winner === -1 ? t.draw : t.turn(name(current), moves.length + 1);
-  $("undo").disabled = !moves.length || !!winner;
+  if (winner > 0) st.textContent = vsBot() ? (winner === 1 ? t.youWin : t.botWin) : t.wins(name(winner));
+  else if (winner === -1) st.textContent = t.draw;
+  else if (vsBot()) st.textContent = current === 1 ? t.yourTurn(moves.length + 1) : t.botTurn;
+  else st.textContent = t.turn(name(current), moves.length + 1);
+  $("undo").disabled = !!winner || botTurn() || (vsBot() ? !moves.some((m) => m.who === 1) : !moves.length);
 }
 
 function showWin() {
   if (winner > 0) {
     $("winStone").className = "stone " + (winner === 1 ? "black" : "white");
     $("winStone").hidden = false;
-    $("winText").textContent = t.wins(name(winner));
-    $("winSub").textContent = t.winSub(moves.length, scores[1], scores[2], name(first));
+    $("winText").textContent = vsBot() ? (winner === 1 ? t.youWin : t.botWin) : t.wins(name(winner));
+    $("winSub").textContent = vsBot()
+      ? t.winSubBot(moves.length, scores[1], scores[2], first === 1)
+      : t.winSub(moves.length, scores[1], scores[2], name(first));
   } else {
     $("winStone").hidden = true;
     $("winText").textContent = t.draw;
@@ -327,18 +474,29 @@ canvas.addEventListener("pointermove", (e) => {
   if (c?.x !== hover?.x || c?.y !== hover?.y) { hover = c; draw(); }
 });
 canvas.addEventListener("pointerleave", () => { hover = null; draw(); });
-canvas.addEventListener("click", (e) => { const c = cellAt(e); if (c) play(c.x, c.y); });
+canvas.addEventListener("click", (e) => { if (botTurn()) return; const c = cellAt(e); if (c) play(c.x, c.y); });
 
-$("lang").onclick = () => { lang = lang === "en" ? "zh" : "en"; save("gomoku-lang", lang); applyLang(); };
+function switchTo(newMode, newDiff) {
+  mode = newMode; diff = newDiff;
+  save("gomoku-mode", mode); save("gomoku-diff", diff);
+  scores = load(scoresKey(), { 1: 0, 2: 0 });
+  first = 1;
+  renderChrome(); newGame();
+}
+document.querySelectorAll("#modeSeg button").forEach((b) => b.onclick = () => { if (b.dataset.mode !== mode) switchTo(b.dataset.mode, diff); });
+document.querySelectorAll("#diffSeg button").forEach((b) => b.onclick = () => { if (b.dataset.diff !== diff) switchTo(mode, b.dataset.diff); });
+$("lang").onclick = () => { lang = lang === "en" ? "zh" : "en"; save("gomoku-lang", lang); renderChrome(); };
 $("undo").onclick = undo;
 $("restart").onclick = newGame;
 $("again").onclick = newGame;
-$("resetScore").onclick = () => { scores = { 1: 0, 2: 0 }; save("gomoku-scores", scores); first = 1; newGame(); };
+$("resetScore").onclick = () => { scores = { 1: 0, 2: 0 }; save(scoresKey(), scores); first = 1; newGame(); };
 for (const i of [1, 2]) {
   $("name" + i).addEventListener("input", () => {
+    if ($("name" + i).readOnly) return;
     const v = $("name" + i).value;
-    names[i] = isDefaultName(v, i) ? "" : v; save("gomoku-names", names); update();
+    names[i] = isDefaultName(v) ? "" : v.trim(); save("gomoku-names", names); update();
   });
+  $("name" + i).addEventListener("blur", renderChrome);
 }
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "z") { e.preventDefault(); undo(); }
@@ -346,7 +504,7 @@ document.addEventListener("keydown", (e) => {
 window.addEventListener("resize", resize);
 
 newGame();
-applyLang();
+renderChrome();
 resize();
 </script>
 </body>
