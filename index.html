@@ -32,6 +32,15 @@
   .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
   .seg button:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .player input[readonly] { cursor: default; }
+  .online { width: min(100%, 620px); margin-bottom: 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .online .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .online .row > * { min-width: 0; }
+  .online input { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); width: 9.5em; text-transform: uppercase; letter-spacing: 2px; }
+  .online .muted { color: var(--muted); font-size: 13px; }
+  .online .link { flex: 1 1 240px; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; user-select: all; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c9a227; margin-right: 6px; vertical-align: 1px; }
+  .dot.on { background: #3f9a5b; }
+  .online .err { color: var(--accent); font-size: 13px; }
   .players { display: flex; gap: 12px; width: min(100%, 620px); margin-bottom: 14px; }
   .player {
     flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
@@ -94,12 +103,34 @@
     <div class="seg" id="modeSeg" role="group">
       <button data-mode="1p" data-i18n="onePlayer"></button>
       <button data-mode="2p" data-i18n="twoPlayers"></button>
+      <button data-mode="online" data-i18n="online"></button>
     </div>
     <div class="seg" id="diffSeg" role="group">
       <button data-diff="easy" data-i18n="easy"></button>
       <button data-diff="medium" data-i18n="medium"></button>
       <button data-diff="hard" data-i18n="hard"></button>
     </div>
+  </div>
+
+  <div class="online" id="onlinePanel" hidden>
+    <div id="lobby">
+      <div class="row">
+        <button class="primary" id="createRoom" data-i18n="createRoom"></button>
+        <span class="muted" data-i18n="or"></span>
+        <input id="joinCode" maxlength="6" autocomplete="off" spellcheck="false">
+        <button id="joinRoom" data-i18n="joinRoom"></button>
+      </div>
+      <div class="muted" data-i18n="lobbyHint" style="margin-top:8px"></div>
+    </div>
+    <div id="inRoom" hidden>
+      <div class="row"><span><span class="dot" id="peerDot"></span><span id="roomLine"></span></span></div>
+      <div class="row">
+        <div class="link" id="shareLink"></div>
+        <button id="copyLink" data-i18n="copy"></button>
+        <button id="leaveRoom" data-i18n="leave"></button>
+      </div>
+    </div>
+    <div class="err" id="onlineErr" hidden></div>
   </div>
 
   <div class="players">
@@ -156,6 +187,15 @@ const I18N = {
     winSub: (k, a, b, f) => `${k} moves · score ${a} : ${b} · ${f} moves first next game`,
     winSubBot: (k, a, b, youFirst) => `${k} moves · score ${a} : ${b} · ${youFirst ? "you move" : "the bot moves"} first next game`,
     draw: "Draw", drawSub: "The board is full. Nobody wins.",
+    online: "Online", createRoom: "Create a room", or: "or", joinRoom: "Join", codePh: "Room code",
+    lobbyHint: "Create a room and send the link to a friend on another computer. You play black, they play white.",
+    roomLine: (code, color, st) => `Room ${code} · you are ${color} · ${st === "on" ? "friend connected" : st === "find" ? "connecting…" : "waiting for your friend to open the link"}`,
+    copy: "Copy link", copied: "Copied", leave: "Leave", friend: "Friend", blackWord: "black", whiteWord: "white",
+    waitFriend: "Waiting for your friend to join", theirTurn: (n, k) => `Waiting for ${n} · move ${k}`,
+    winSubOnline: (k, a, b, f) => `${k} moves · score ${a} : ${b} · ${f} moves first next game`,
+    info3: "Each player uses their own device. The room creator plays black, the friend who opens the link plays white. Undo is off in online games.",
+    badCode: "Enter the 6-character room code your friend sent you.",
+    connectErr: "Couldn't reach the connection server. Check your internet connection and try again.",
   },
   zh: {
     title: "五子棋", subtitle: "Gomoku", black: "黑方", white: "白方", you: "你", bot: "电脑",
@@ -170,6 +210,15 @@ const I18N = {
     winSub: (k, a, b, f) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局 ${f} 先手`,
     winSubBot: (k, a, b, youFirst) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局${youFirst ? "你" : "电脑"}先手`,
     draw: "平局", drawSub: "棋盘下满了，不分胜负",
+    online: "联机", createRoom: "创建房间", or: "或", joinRoom: "加入", codePh: "房间号",
+    lobbyHint: "创建房间后把链接发给另一台电脑上的朋友。你执黑，朋友执白。",
+    roomLine: (code, color, st) => `房间 ${code} · 你执${color} · ${st === "on" ? "朋友已连接" : st === "find" ? "正在连接…" : "等待朋友打开链接"}`,
+    copy: "复制链接", copied: "已复制", leave: "离开", friend: "朋友", blackWord: "黑", whiteWord: "白",
+    waitFriend: "等待朋友加入", theirTurn: (n, k) => `等待 ${n} 落子 · 第 ${k} 手`,
+    winSubOnline: (k, a, b, f) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局 ${f} 先手`,
+    info3: "两人各用自己的设备。创建房间的人执黑，打开链接的朋友执白。联机对局不能悔棋。",
+    badCode: "请输入朋友发给你的 6 位房间号。",
+    connectErr: "连不上联机服务器，请检查网络后再试。",
   },
 };
 
@@ -179,14 +228,22 @@ function load(key, fallback) {
 function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
 let lang = load("gomoku-lang", "en"); if (!I18N[lang]) lang = "en";
-let mode = load("gomoku-mode", "2p"); if (mode !== "1p" && mode !== "2p") mode = "2p";
+let mode = load("gomoku-mode", "2p"); if (!["1p", "2p", "online"].includes(mode)) mode = "2p";
 let diff = load("gomoku-diff", "medium"); if (!["easy", "medium", "hard"].includes(diff)) diff = "medium";
 let t = I18N[lang];
 const vsBot = () => mode === "1p";
-const scoresKey = () => vsBot() ? "gomoku-scores-bot-" + diff : "gomoku-scores";
+const isOnline = () => mode === "online";
+const scoresKey = () => isOnline() ? "gomoku-scores-online-" + (net.room || "") : vsBot() ? "gomoku-scores-bot-" + diff : "gomoku-scores";
+
+// 联机：通过公共 MQTT 服务器（加密 WebSocket）中转。房主执黑，朋友执白
+const MQTT_JS = "https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js";
+const BROKERS = ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
+const topicFor = (code) => "gomoku-eh8/room/" + code;
+const net = { room: null, color: 0, client: null, id: "", peerId: null, lastSeen: 0, beat: null, status: "", game: 0, peerName: "", myName: "" };
+net.myName = load("gomoku-online-name", "");
 
 // 默认名字（任何语言里的 黑方/白方/你/电脑）不存，切语言时跟着换
-const DEFAULTS = new Set(Object.values(I18N).flatMap((d) => [d.black, d.white, d.you, d.bot]));
+const DEFAULTS = new Set(Object.values(I18N).flatMap((d) => [d.black, d.white, d.you, d.bot, d.friend]));
 const isDefaultName = (v) => !v.trim() || DEFAULTS.has(v.trim());
 
 let board, moves, current, winner, winLine, hover, first = 1, botTimer = null;
@@ -194,25 +251,40 @@ let scores = load(scoresKey(), { 1: 0, 2: 0 });
 const names = load("gomoku-names", { 1: "", 2: "" });
 for (const i of [1, 2]) if (isDefaultName(names[i] || "")) names[i] = "";
 
-function defaultName(who) { return vsBot() ? (who === 1 ? t.you : t.bot) : (who === 1 ? t.black : t.white); }
+function defaultName(who) {
+  if (isOnline()) return who === net.color ? t.you : net.color ? t.friend : (who === 1 ? t.black : t.white);
+  return vsBot() ? (who === 1 ? t.you : t.bot) : (who === 1 ? t.black : t.white);
+}
 function name(who) {
+  if (isOnline()) return who === net.color ? (net.myName || t.you) : (net.peerName || defaultName(who));
   if (vsBot() && who === 2) return t.bot;
   return names[who] || defaultName(who);
 }
+function nameEditable(who) { return isOnline() ? !!net.room && who === net.color : !(vsBot() && who === 2); }
+const peerOn = () => net.status === "on";
 
 function renderChrome() {
   t = I18N[lang];
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t[el.dataset.i18n]; });
   $("lang").textContent = t.toggle;
-  $("info").textContent = vsBot() ? t.info1 : t.info2;
+  $("info").textContent = isOnline() ? t.info3 : vsBot() ? t.info1 : t.info2;
+  $("joinCode").placeholder = t.codePh;
+  $("onlinePanel").hidden = !isOnline();
+  $("lobby").hidden = !!net.room; $("inRoom").hidden = !net.room;
+  if (net.room) {
+    $("roomLine").textContent = t.roomLine(net.room, net.color === 1 ? t.blackWord : t.whiteWord, net.status);
+    $("peerDot").classList.toggle("on", peerOn());
+    $("shareLink").textContent = shareUrl();
+  }
+  $("undo").hidden = isOnline();
   document.querySelectorAll("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === mode));
   document.querySelectorAll("#diffSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.diff === diff));
   $("diffSeg").hidden = !vsBot();
   for (const i of [1, 2]) {
-    const inp = $("name" + i), botSide = vsBot() && i === 2;
-    if (document.activeElement !== inp) inp.value = botSide ? t.bot : (names[i] || defaultName(i));
-    inp.readOnly = botSide;
+    const inp = $("name" + i);
+    if (document.activeElement !== inp) inp.value = isOnline() || (vsBot() && i === 2) ? name(i) : (names[i] || defaultName(i));
+    inp.readOnly = !nameEditable(i);
     inp.setAttribute("aria-label", t.nameLabel(defaultName(i)));
   }
   update();
@@ -261,7 +333,7 @@ function draw() {
     ctx.beginPath(); ctx.arc(pos(x), pos(y), cell * 0.1, 0, Math.PI * 2); ctx.fill();
   }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (board[y][x]) stone(x, y, board[y][x], 1);
-  if (hover && !winner && !botTurn() && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
+  if (hover && canMove() && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
   const last = moves[moves.length - 1];
   if (last && !winLine) {
     ctx.fillStyle = "#d9442b";
@@ -323,7 +395,7 @@ function play(x, y) {
 }
 
 function undo() {
-  if (winner || botTurn()) return;
+  if (isOnline() || winner || botTurn()) return;
   if (vsBot()) {
     if (!moves.some((m) => m.who === 1)) return;
     while (moves.length && moves[moves.length - 1].who === 2) { const m = moves.pop(); board[m.y][m.x] = 0; }
@@ -438,20 +510,30 @@ function update() {
   $("p2").classList.toggle("active", !winner && current === 2);
   const st = $("status");
   st.classList.toggle("win", winner > 0);
-  if (winner > 0) st.textContent = vsBot() ? (winner === 1 ? t.youWin : t.botWin) : t.wins(name(winner));
+  if (winner > 0) st.textContent = winText();
   else if (winner === -1) st.textContent = t.draw;
+  else if (isOnline()) {
+    st.textContent = !net.room ? "" : !peerOn() ? t.waitFriend
+      : current === net.color ? t.yourTurn(moves.length + 1) : t.theirTurn(name(current), moves.length + 1);
+  }
   else if (vsBot()) st.textContent = current === 1 ? t.yourTurn(moves.length + 1) : t.botTurn;
   else st.textContent = t.turn(name(current), moves.length + 1);
-  $("undo").disabled = !!winner || botTurn() || (vsBot() ? !moves.some((m) => m.who === 1) : !moves.length);
+  $("undo").disabled = isOnline() || !!winner || botTurn() || (vsBot() ? !moves.some((m) => m.who === 1) : !moves.length);
+}
+
+function winText() {
+  if (vsBot()) return winner === 1 ? t.youWin : t.botWin;
+  if (isOnline() && net.color) return winner === net.color ? t.youWin : t.wins(name(winner));
+  return t.wins(name(winner));
 }
 
 function showWin() {
   if (winner > 0) {
     $("winStone").className = "stone " + (winner === 1 ? "black" : "white");
     $("winStone").hidden = false;
-    $("winText").textContent = vsBot() ? (winner === 1 ? t.youWin : t.botWin) : t.wins(name(winner));
-    $("winSub").textContent = vsBot()
-      ? t.winSubBot(moves.length, scores[1], scores[2], first === 1)
+    $("winText").textContent = winText();
+    $("winSub").textContent = isOnline() ? t.winSubOnline(moves.length, scores[1], scores[2], name(first))
+      : vsBot() ? t.winSubBot(moves.length, scores[1], scores[2], first === 1)
       : t.winSub(moves.length, scores[1], scores[2], name(first));
   } else {
     $("winStone").hidden = true;
@@ -474,9 +556,21 @@ canvas.addEventListener("pointermove", (e) => {
   if (c?.x !== hover?.x || c?.y !== hover?.y) { hover = c; draw(); }
 });
 canvas.addEventListener("pointerleave", () => { hover = null; draw(); });
-canvas.addEventListener("click", (e) => { if (botTurn()) return; const c = cellAt(e); if (c) play(c.x, c.y); });
+function canMove() {
+  if (winner) return false;
+  if (isOnline()) return !!net.room && peerOn() && net.color === current;
+  return !botTurn();
+}
+canvas.addEventListener("click", (e) => {
+  if (!canMove()) return;
+  const c = cellAt(e); if (!c || board[c.y][c.x]) return;
+  const n = moves.length;
+  play(c.x, c.y);
+  if (isOnline()) send("move", { game: net.game, n, x: c.x, y: c.y });
+});
 
 function switchTo(newMode, newDiff) {
+  if (mode === "online" && newMode !== "online") leaveRoom(false);
   mode = newMode; diff = newDiff;
   save("gomoku-mode", mode); save("gomoku-diff", diff);
   scores = load(scoresKey(), { 1: 0, 2: 0 });
@@ -487,13 +581,20 @@ document.querySelectorAll("#modeSeg button").forEach((b) => b.onclick = () => { 
 document.querySelectorAll("#diffSeg button").forEach((b) => b.onclick = () => { if (b.dataset.diff !== diff) switchTo(mode, b.dataset.diff); });
 $("lang").onclick = () => { lang = lang === "en" ? "zh" : "en"; save("gomoku-lang", lang); renderChrome(); };
 $("undo").onclick = undo;
-$("restart").onclick = newGame;
-$("again").onclick = newGame;
-$("resetScore").onclick = () => { scores = { 1: 0, 2: 0 }; save(scoresKey(), scores); first = 1; newGame(); };
+$("restart").onclick = () => isOnline() ? onlineNew(false) : newGame();
+$("again").onclick = () => isOnline() ? onlineNew(false) : newGame();
+$("resetScore").onclick = () => {
+  if (isOnline()) return onlineNew(true);
+  scores = { 1: 0, 2: 0 }; save(scoresKey(), scores); first = 1; newGame();
+};
 for (const i of [1, 2]) {
   $("name" + i).addEventListener("input", () => {
     if ($("name" + i).readOnly) return;
     const v = $("name" + i).value;
+    if (isOnline()) {
+      net.myName = isDefaultName(v) ? "" : v.trim(); save("gomoku-online-name", net.myName);
+      send("name", { name: net.myName }); update(); return;
+    }
     names[i] = isDefaultName(v) ? "" : v.trim(); save("gomoku-names", names); update();
   });
   $("name" + i).addEventListener("blur", renderChrome);
@@ -503,9 +604,175 @@ document.addEventListener("keydown", (e) => {
 });
 window.addEventListener("resize", resize);
 
+// ---------- 联机 ----------
+function loadScript(src) {
+  return new Promise((ok, fail) => { const el = document.createElement("script"); el.src = src; el.onload = ok; el.onerror = fail; document.head.appendChild(el); });
+}
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function newCode() { let c = ""; for (let i = 0; i < 6; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return c; }
+function shareUrl() { return location.origin + location.pathname + "#room-" + net.room; }
+function showErr(msg) { $("onlineErr").textContent = msg || ""; $("onlineErr").hidden = !msg; }
+function publish(event, payload) {
+  if (net.client && net.client.connected && net.room)
+    net.client.publish(topicFor(net.room), JSON.stringify({ from: net.id, color: net.color, event, payload }), { qos: 1 });
+}
+function send(event, payload) { if (peerOn()) publish(event, payload); }
+function setStatus(st) { net.status = st; renderChrome(); draw(); }
+
+function snapshot() { return { game: net.game, moves: moves.map((m) => [m.x, m.y]), first, scores, name: net.myName }; }
+const sendState = () => send("state", snapshot());
+
+// 用对方的完整局面替换本地局面
+function adopt(st) {
+  net.game = st.game; scores = st.scores || { 1: 0, 2: 0 };
+  board = Array.from({ length: N }, () => Array(N).fill(0));
+  moves = []; winner = 0; winLine = null; current = st.first;
+  $("overlay").classList.remove("show");
+  for (const [x, y] of st.moves) {
+    board[y][x] = current; moves.push({ x, y, who: current });
+    const line = checkWin(x, y, current);
+    if (line) { winner = current; winLine = line; break; }
+    if (moves.length === N * N) { winner = -1; break; }
+    current = 3 - current;
+  }
+  first = winner > 0 ? (winner === 1 ? 2 : 1) : st.first;
+  if (winner) showWin();
+  save(scoresKey(), scores);
+  update(); draw();
+}
+
+function onMessage({ event, payload: p }) {
+  if (event === "state") {
+    if (p.name !== undefined) net.peerName = p.name;
+    if (p.game > net.game || (p.game === net.game && p.moves.length > moves.length)) adopt(p);
+    else if (p.game < net.game || p.moves.length < moves.length) sendState();
+    renderChrome();
+  } else if (event === "want-state") sendState();
+  else if (event === "name") { net.peerName = p.name; renderChrome(); }
+  else if (event === "move") {
+    if (p.game === net.game && p.n === moves.length && !winner && !board[p.y][p.x]) play(p.x, p.y);
+    else send("want-state", {});
+  } else if (event === "new") {
+    if (p.game <= net.game) return;
+    net.game = p.game; first = p.first; scores = p.scores;
+    save(scoresKey(), scores); newGame();
+  }
+}
+
+// 每个客户端订阅房间 topic；消息带上自己的 id 和颜色，只处理对方颜色发来的消息
+function onPacket(raw) {
+  let m; try { m = JSON.parse(raw); } catch { return; }
+  if (!m || m.from === net.id || !net.room) return;
+  if (m.color === net.color) return;
+  if (m.event === "bye") {
+    if (m.from === net.peerId) { net.peerId = null; setStatus("wait"); }
+    return;
+  }
+  const isNew = net.peerId !== m.from || !peerOn();
+  net.peerId = m.from; net.lastSeen = Date.now();
+  if (isNew) { showErr(""); setStatus("on"); sendState(); }
+  if (m.event === "hello") return;
+  if (m.event === "ping") return;
+  onMessage(m);
+}
+
+function connectBroker(code, urls) {
+  const url = urls[0];
+  const c = mqtt.connect(url, {
+    clientId: "gmk_" + net.id, connectTimeout: 8000, reconnectPeriod: 3000, clean: true,
+    will: { topic: topicFor(code), payload: JSON.stringify({ from: net.id, color: net.color, event: "bye" }), qos: 0, retain: false },
+  });
+  net.client = c;
+  let everConnected = false;
+  c.on("connect", () => {
+    if (net.client !== c) return;
+    everConnected = true; showErr("");
+    c.subscribe(topicFor(code), { qos: 1 }, () => { publish("hello", {}); });
+    if (net.status === "find") setStatus("wait");
+  });
+  c.on("message", (_topic, buf) => { if (net.client === c) onPacket(buf.toString()); });
+  c.on("error", () => {});
+  c.on("offline", () => {
+    if (net.client !== c) return;
+    if (!everConnected && urls.length > 1) { c.end(true); connectBroker(code, urls.slice(1)); return; }
+    showErr(t.connectErr);
+  });
+}
+
+async function joinRoom(code, creating) {
+  showErr("");
+  code = code.toUpperCase();
+  leaveRoom(false);
+  net.room = code; net.game = 0; net.id = Math.random().toString(36).slice(2, 12);
+  let saved = null; try { saved = sessionStorage.getItem("gomoku-room-" + code); } catch {}
+  net.color = creating || saved === "1" ? 1 : 2;
+  try { sessionStorage.setItem("gomoku-room-" + code, String(net.color)); } catch {}
+  history.replaceState(null, "", "#room-" + code);
+  scores = load(scoresKey(), { 1: 0, 2: 0 }); first = 1;
+  newGame();
+  setStatus("find");
+  try { if (!window.mqtt) await loadScript(MQTT_JS); } catch { showErr(t.connectErr); return; }
+  if (net.room !== code) return;
+  connectBroker(code, BROKERS);
+  // 心跳：每 5 秒报一次在线，15 秒没消息就当对方离开
+  net.beat = setInterval(() => {
+    publish("ping", {});
+    if (peerOn() && Date.now() - net.lastSeen > 15000) { net.peerId = null; setStatus("wait"); }
+  }, 5000);
+}
+
+function onlineNew(resetScores) {
+  if (!net.room) return;
+  if (resetScores) { scores = { 1: 0, 2: 0 }; first = 1; }
+  net.game++;
+  newGame();
+  save(scoresKey(), scores);
+  send("new", { game: net.game, first, scores });
+}
+
+function leaveRoom(render = true) {
+  clearInterval(net.beat);
+  if (net.client) { publish("bye", {}); const c = net.client; setTimeout(() => c.end(true), 200); }
+  Object.assign(net, { room: null, color: 0, client: null, peerId: null, beat: null, status: "", peerName: "", game: 0 });
+  if (location.hash) history.replaceState(null, "", location.pathname);
+  showErr("");
+  if (render) { first = 1; scores = { 1: 0, 2: 0 }; newGame(); renderChrome(); }
+}
+
+$("createRoom").onclick = () => joinRoom(newCode(), true);
+$("joinRoom").onclick = () => {
+  const c = $("joinCode").value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{6}$/.test(c)) return showErr(t.badCode);
+  joinRoom(c, false);
+};
+$("joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinRoom").click(); });
+$("leaveRoom").onclick = () => leaveRoom();
+$("copyLink").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(shareUrl());
+    $("copyLink").textContent = t.copied; setTimeout(() => ($("copyLink").textContent = t.copy), 1500);
+  } catch {
+    const range = document.createRange(); range.selectNodeContents($("shareLink"));
+    getSelection().removeAllRanges(); getSelection().addRange(range);
+  }
+};
+
+window.addEventListener("pagehide", () => publish("bye", {}));
+window.addEventListener("hashchange", () => {
+  const m = location.hash.match(/^#room-([A-Za-z0-9]{6})$/);
+  if (m && m[1].toUpperCase() !== net.room) {
+    if (mode !== "online") { mode = "online"; save("gomoku-mode", mode); }
+    joinRoom(m[1], false);
+  }
+});
+
 newGame();
+const hashRoom = location.hash.match(/^#room-([A-Za-z0-9]{6})$/);
+if (hashRoom) { mode = "online"; save("gomoku-mode", mode); }
+else if (mode === "online") { /* 没有房间号就停在大厅 */ }
 renderChrome();
 resize();
+if (hashRoom) joinRoom(hashRoom[1], false);
 </script>
 </body>
 </html>
