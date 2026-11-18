@@ -11,4 +11,5 @@ Or open `index.html` locally.
 - Win detection in all four directions, with the winning line highlighted
 - Undo (button or ⌘/Ctrl+Z), restart, and a running score saved in the browser
 - Editable player names; the loser moves first in the next game
+- English and Chinese interface (toggle in the top-right corner)
 - Works on phones and in dark mode
