@@ -6,11 +6,13 @@
 <title>Gomoku · 五子棋</title>
 <style>
   :root {
-    --bg: #f3ede2; --panel: #fffaf2; --text: #2b2520; --muted: #8c8173; --line: #e2d8c8;
-    --wood: #f7c9d6; --wood-dark: #e99bb5; --grid: #7a3352; --accent: #b5452f;
+    /* Nippon colors: 基底 #FEDFE1 #D7C4BB #DC9FB4 · 关键色 #FFFFFF #A5DEE4 #9E7A7A */
+    --bg: #FEDFE1; --panel: #FFFFFF; --text: #4f3b3c; --muted: #9E7A7A; --line: #D7C4BB;
+    --wood: #F4C9CF; --wood-dark: #DC9FB4; --grid: #8a6566; --accent: #9E7A7A; --key: #A5DEE4;
+    --shade: rgba(158, 122, 122, .35);
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #1c1916; --panel: #27231f; --text: #efe8dd; --muted: #a39887; --line: #3a342d; }
+    :root { --bg: #3b2d2f; --panel: #4a393b; --text: #fdeef0; --muted: #D7C4BB; --line: #6a5254; --shade: rgba(0, 0, 0, .35); }
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -38,8 +40,8 @@
   .online input { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); width: 9.5em; text-transform: uppercase; letter-spacing: 2px; }
   .online .muted { color: var(--muted); font-size: 13px; }
   .online .link { flex: 1 1 240px; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; white-space: nowrap; user-select: all; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c9a227; margin-right: 6px; vertical-align: 1px; }
-  .dot.on { background: #3f9a5b; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--line); margin-right: 6px; vertical-align: 1px; }
+  .dot.on { background: var(--key); box-shadow: 0 0 0 1px var(--accent); }
   .online .err { color: var(--accent); font-size: 13px; }
   .players { display: flex; gap: 12px; width: min(100%, 620px); margin-bottom: 14px; }
   .player {
@@ -63,7 +65,7 @@
   .board-wrap {
     width: min(100%, 620px); aspect-ratio: 1; padding: 3.2%;
     background: linear-gradient(135deg, var(--wood), var(--wood-dark));
-    border-radius: 12px; box-shadow: 0 10px 30px rgba(120, 30, 70, .25), inset 0 0 0 1px rgba(0,0,0,.08);
+    border-radius: 12px; box-shadow: 0 10px 30px var(--shade), inset 0 0 0 1px rgba(0,0,0,.08);
     position: relative; touch-action: manipulation;
   }
   canvas { width: 100%; height: 100%; display: block; cursor: pointer; }
@@ -75,12 +77,12 @@
   }
   button:hover:not(:disabled) { border-color: var(--accent); }
   button:disabled { opacity: .45; cursor: default; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .info { margin-top: 14px; color: var(--muted); font-size: 13px; text-align: center; max-width: 520px; }
 
   .overlay {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(30, 20, 10, .35); border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .3s;
+    background: var(--shade); border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .3s;
   }
   .overlay.show { opacity: 1; pointer-events: auto; }
   .card {
@@ -314,6 +316,7 @@ function resize() {
 }
 
 function pos(i) { return pad + i * cell; }
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 function draw() {
   if (!size) return;
@@ -336,13 +339,16 @@ function draw() {
   if (hover && canMove() && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
   const last = moves[moves.length - 1];
   if (last && !winLine) {
-    ctx.fillStyle = "#d9442b";
-    ctx.beginPath(); ctx.arc(pos(last.x), pos(last.y), cell * 0.11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = css("--key"); ctx.strokeStyle = css("--accent"); ctx.lineWidth = Math.max(1.5, cell * 0.04);
+    ctx.beginPath(); ctx.arc(pos(last.x), pos(last.y), cell * 0.13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
   if (winLine) {
     const a = winLine[0], b = winLine[winLine.length - 1];
-    ctx.strokeStyle = "#d9442b"; ctx.lineWidth = cell * 0.12; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(pos(a.x), pos(a.y)); ctx.lineTo(pos(b.x), pos(b.y)); ctx.stroke();
+    ctx.lineCap = "round";
+    for (const [color, w] of [[css("--accent"), 0.2], [css("--key"), 0.12]]) {
+      ctx.strokeStyle = color; ctx.lineWidth = cell * w;
+      ctx.beginPath(); ctx.moveTo(pos(a.x), pos(a.y)); ctx.lineTo(pos(b.x), pos(b.y)); ctx.stroke();
+    }
   }
 }
 
