@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五子棋 · Gomoku</title>
+<style>
+  :root {
+    --bg: #f3ede2; --panel: #fffaf2; --text: #2b2520; --muted: #8c8173; --line: #e2d8c8;
+    --wood: #e4bf82; --wood-dark: #c99a55; --grid: #5a4127; --accent: #b5452f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1916; --panel: #27231f; --text: #efe8dd; --muted: #a39887; --line: #3a342d; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  }
+  h1 { font-size: 22px; margin: 4px 0 14px; letter-spacing: 2px; }
+  h1 small { font-weight: 400; color: var(--muted); font-size: 14px; letter-spacing: 0; margin-left: 6px; }
+
+  .players { display: flex; gap: 12px; width: min(100%, 620px); margin-bottom: 14px; }
+  .player {
+    flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 14px; transition: border-color .2s, transform .2s;
+  }
+  .player.active { border-color: var(--accent); transform: translateY(-2px); }
+  .player .stone { width: 26px; height: 26px; border-radius: 50%; flex: none; }
+  .player input {
+    flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
+    font: inherit; font-weight: 600; outline: none; padding: 2px 0; border-bottom: 1px dashed transparent;
+  }
+  .player input:focus { border-bottom-color: var(--muted); }
+  .player .score { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stone.black { background: radial-gradient(circle at 35% 30%, #666, #111 60%); box-shadow: 0 2px 3px rgba(0,0,0,.4); }
+  .stone.white { background: radial-gradient(circle at 35% 30%, #fff, #d9d4cc 70%); box-shadow: 0 2px 3px rgba(0,0,0,.3); }
+
+  .status { height: 26px; margin-bottom: 10px; font-weight: 600; color: var(--muted); text-align: center; }
+  .status.win { color: var(--accent); font-size: 17px; }
+
+  .board-wrap {
+    width: min(100%, 620px); aspect-ratio: 1; padding: 3.2%;
+    background: linear-gradient(135deg, var(--wood), var(--wood-dark));
+    border-radius: 12px; box-shadow: 0 10px 30px rgba(60, 35, 10, .25), inset 0 0 0 1px rgba(0,0,0,.08);
+    position: relative; touch-action: manipulation;
+  }
+  canvas { width: 100%; height: 100%; display: block; cursor: pointer; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+  button {
+    font: inherit; padding: 8px 18px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .info { margin-top: 14px; color: var(--muted); font-size: 13px; text-align: center; max-width: 520px; }
+
+  .overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(30, 20, 10, .35); border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .3s;
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+  .card {
+    background: var(--panel); padding: 22px 28px; border-radius: 16px; text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25); transform: scale(.9); transition: transform .3s;
+  }
+  .overlay.show .card { transform: scale(1); }
+  .card .big { font-size: 22px; font-weight: 700; margin: 8px 0 4px; }
+  .card .stone { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto; }
+  .card p { color: var(--muted); margin: 0 0 14px; }
+</style>
+</head>
+<body>
+  <h1>五子棋<small>Gomoku · 双人对战</small></h1>
+
+  <div class="players">
+    <div class="player" id="p1">
+      <div class="stone black"></div>
+      <input id="name1" value="黑方" maxlength="10" aria-label="黑方名字">
+      <div class="score" id="score1">0</div>
+    </div>
+    <div class="player" id="p2">
+      <div class="stone white"></div>
+      <input id="name2" value="白方" maxlength="10" aria-label="白方名字">
+      <div class="score" id="score2">0</div>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="board-wrap">
+    <canvas id="board"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <div class="stone" id="winStone"></div>
+        <div class="big" id="winText"></div>
+        <p id="winSub"></p>
+        <button class="primary" id="again">再来一局</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="undo">悔棋</button>
+    <button id="restart">重新开始</button>
+    <button id="resetScore">清空比分</button>
+  </div>
+  <div class="info">两人轮流在交叉点落子，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。点击名字可以修改。</div>
+
+<script>
+const N = 15;                       // 15 × 15 路棋盘
+const canvas = document.getElementById("board");
+const ctx = canvas.getContext("2d");
+const $ = (id) => document.getElementById(id);
+
+let board, moves, current, winner, winLine, hover, first = 1;
+let scores = load("gomoku-scores", { 1: 0, 2: 0 });
+const names = load("gomoku-names", { 1: "黑方", 2: "白方" });
+$("name1").value = names[1]; $("name2").value = names[2];
+
+function load(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
+}
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+// 玩家 1 永远执黑、玩家 2 永远执白；谁先手由 first 决定（输家下局先手）
+function newGame() {
+  board = Array.from({ length: N }, () => Array(N).fill(0));
+  moves = []; winner = 0; winLine = null; hover = null;
+  current = first;
+  $("overlay").classList.remove("show");
+  update(); draw();
+}
+
+// ---------- 绘制 ----------
+let size, cell, pad;
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  size = rect.width; cell = size / N; pad = cell / 2;
+  draw();
+}
+
+function pos(i) { return pad + i * cell; }
+
+function draw() {
+  if (!size) return;
+  ctx.clearRect(0, 0, size, size);
+  // 网格
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--grid");
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < N; i++) {
+    ctx.moveTo(pos(0), pos(i)); ctx.lineTo(pos(N - 1), pos(i));
+    ctx.moveTo(pos(i), pos(0)); ctx.lineTo(pos(i), pos(N - 1));
+  }
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pos(0), pos(0), pos(N - 1) - pos(0), pos(N - 1) - pos(0));
+  // 星位
+  ctx.fillStyle = ctx.strokeStyle;
+  for (const [x, y] of [[3, 3], [11, 3], [7, 7], [3, 11], [11, 11]]) {
+    ctx.beginPath(); ctx.arc(pos(x), pos(y), cell * 0.1, 0, Math.PI * 2); ctx.fill();
+  }
+  // 棋子
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (board[y][x]) stone(x, y, board[y][x], 1);
+  // 悬停预览
+  if (hover && !winner && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
+  // 最后一手标记
+  const last = moves[moves.length - 1];
+  if (last && !winLine) {
+    ctx.fillStyle = "#d9442b";
+    ctx.beginPath(); ctx.arc(pos(last.x), pos(last.y), cell * 0.11, 0, Math.PI * 2); ctx.fill();
+  }
+  // 胜利连线
+  if (winLine) {
+    const a = winLine[0], b = winLine[winLine.length - 1];
+    ctx.strokeStyle = "#d9442b"; ctx.lineWidth = cell * 0.12; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(pos(a.x), pos(a.y)); ctx.lineTo(pos(b.x), pos(b.y)); ctx.stroke();
+  }
+}
+
+function stone(x, y, who, alpha) {
+  const cx = pos(x), cy = pos(y), r = cell * 0.44;
+  ctx.save(); ctx.globalAlpha = alpha;
+  if (alpha === 1) { ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = cell * 0.12; ctx.shadowOffsetY = cell * 0.06; }
+  const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+  if (who === 1) { g.addColorStop(0, "#6a6a6a"); g.addColorStop(1, "#0d0d0d"); }
+  else { g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#cfc9bf"); }
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+// ---------- 规则 ----------
+function checkWin(x, y, who) {
+  for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+    const line = [{ x, y }];
+    for (const s of [1, -1]) {
+      let nx = x + dx * s, ny = y + dy * s;
+      while (nx >= 0 && ny >= 0 && nx < N && ny < N && board[ny][nx] === who) {
+        s === 1 ? line.push({ x: nx, y: ny }) : line.unshift({ x: nx, y: ny });
+        nx += dx * s; ny += dy * s;
+      }
+    }
+    if (line.length >= 5) return line;
+  }
+  return null;
+}
+
+function play(x, y) {
+  if (winner || board[y][x]) return;
+  board[y][x] = current;
+  moves.push({ x, y, who: current });
+  const line = checkWin(x, y, current);
+  if (line) {
+    winner = current; winLine = line;
+    scores[winner]++; save("gomoku-scores", scores);
+    first = winner === 1 ? 2 : 1;
+    setTimeout(showWin, 450);
+  } else if (moves.length === N * N) {
+    winner = -1; setTimeout(showWin, 300);
+  } else {
+    current = current === 1 ? 2 : 1;
+  }
+  update(); draw();
+}
+
+function undo() {
+  if (!moves.length || winner) return;
+  const m = moves.pop();
+  board[m.y][m.x] = 0; current = m.who;
+  update(); draw();
+}
+
+// ---------- 界面 ----------
+function name(who) { return $("name" + who).value.trim() || (who === 1 ? "黑方" : "白方"); }
+
+function update() {
+  $("score1").textContent = scores[1]; $("score2").textContent = scores[2];
+  $("p1").classList.toggle("active", !winner && current === 1);
+  $("p2").classList.toggle("active", !winner && current === 2);
+  const st = $("status");
+  st.classList.toggle("win", winner > 0);
+  st.textContent = winner > 0 ? `${name(winner)} 获胜！`
+    : winner === -1 ? "平局" : `轮到 ${name(current)} 落子 · 第 ${moves.length + 1} 手`;
+  $("undo").disabled = !moves.length || !!winner;
+}
+
+function showWin() {
+  if (winner > 0) {
+    $("winStone").className = "stone " + (winner === 1 ? "black" : "white");
+    $("winStone").hidden = false;
+    $("winText").textContent = `${name(winner)} 获胜！`;
+    $("winSub").textContent = `共 ${moves.length} 手 · 比分 ${scores[1]} : ${scores[2]} · 下局 ${name(first)} 先手`;
+  } else {
+    $("winStone").hidden = true;
+    $("winText").textContent = "平局";
+    $("winSub").textContent = "棋盘下满了，不分胜负";
+  }
+  $("overlay").classList.add("show");
+}
+
+function cellAt(e) {
+  const r = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left - pad) / cell);
+  const y = Math.round((e.clientY - r.top - pad) / cell);
+  return x >= 0 && y >= 0 && x < N && y < N ? { x, y } : null;
+}
+
+canvas.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse") return;
+  const c = cellAt(e);
+  if (c?.x !== hover?.x || c?.y !== hover?.y) { hover = c; draw(); }
+});
+canvas.addEventListener("pointerleave", () => { hover = null; draw(); });
+canvas.addEventListener("click", (e) => { const c = cellAt(e); if (c) play(c.x, c.y); });
+
+$("undo").onclick = undo;
+$("restart").onclick = newGame;
+$("again").onclick = newGame;
+$("resetScore").onclick = () => { scores = { 1: 0, 2: 0 }; save("gomoku-scores", scores); first = 1; newGame(); };
+for (const i of [1, 2]) {
+  $("name" + i).addEventListener("input", () => {
+    names[i] = $("name" + i).value; save("gomoku-names", names); update();
+  });
+}
+document.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "z") { e.preventDefault(); undo(); }
+});
+window.addEventListener("resize", resize);
+
+newGame();
+resize();
+</script>
+</body>
+</html>
