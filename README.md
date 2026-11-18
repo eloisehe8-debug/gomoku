@@ -2,7 +2,9 @@
 
 A two-player Gomoku (five in a row) game that runs in the browser. Single HTML file, no dependencies.
 
-**Play:** open `index.html`, or visit the GitHub Pages site.
+**Play online:** https://eloisehe8-debug.github.io/gomoku/
+
+Or open `index.html` locally.
 
 ## Features
 - 15 × 15 board, black vs. white on the same device
