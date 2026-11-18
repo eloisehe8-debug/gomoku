@@ -8,7 +8,7 @@
   :root {
     /* Nippon colors: 基底 #FEDFE1 #D7C4BB #DC9FB4 · 关键色 #FFFFFF #A5DEE4 #9E7A7A */
     --bg: #FEDFE1; --panel: #FFFFFF; --text: #4f3b3c; --muted: #9E7A7A; --line: #D7C4BB;
-    --wood: #F4C9CF; --wood-dark: #DC9FB4; --grid: #8a6566; --accent: #9E7A7A; --key: #A5DEE4;
+    --wood: #F4C9CF; --wood-dark: #DC9FB4; --grid: #8a6566; --accent: #9E7A7A; --accent-dark: #876464; --key: #A5DEE4;
     --shade: rgba(158, 122, 122, .35);
   }
   @media (prefers-color-scheme: dark) {
@@ -30,8 +30,9 @@
 
   .modes { width: min(100%, 620px); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px; }
   .seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
-  .seg button { border: 0; padding: 5px 16px; font-size: 13px; border-radius: 999px; background: transparent; }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .seg button { border: 0; padding: 5px 16px; font-size: 13px; border-radius: 999px; background: transparent; color: var(--accent); }
+  .seg button:hover:not(:disabled) { background: var(--bg); }
+  .seg button[aria-pressed="true"], .seg button[aria-pressed="true"]:hover { background: var(--accent); color: #fff; }
   .seg button:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .player input[readonly] { cursor: default; }
   .online { width: min(100%, 620px); margin-bottom: 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -56,8 +57,8 @@
   }
   .player input:focus { border-bottom-color: var(--muted); }
   .player .score { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .stone.black { background: radial-gradient(circle at 35% 30%, #666, #111 60%); box-shadow: 0 2px 3px rgba(0,0,0,.4); }
-  .stone.white { background: radial-gradient(circle at 35% 30%, #fff, #d9d4cc 70%); box-shadow: 0 2px 3px rgba(0,0,0,.3); }
+  .stone.p1 { background: radial-gradient(circle at 35% 30%, #fff, #ece3e4 70%); box-shadow: 0 2px 3px rgba(80,50,50,.35), inset 0 0 0 1px rgba(158,122,122,.25); }
+  .stone.p2 { background: radial-gradient(circle at 35% 30%, #e3f6f8, #A5DEE4 55%, #86c6ce); box-shadow: 0 2px 3px rgba(80,50,50,.35); }
 
   .status { height: 26px; margin-bottom: 10px; font-weight: 600; color: var(--muted); text-align: center; }
   .status.win { color: var(--accent); font-size: 17px; }
@@ -73,9 +74,9 @@
   .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
   button {
     font: inherit; padding: 8px 18px; border-radius: 10px; cursor: pointer;
-    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600;
   }
-  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
   button:disabled { opacity: .45; cursor: default; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .info { margin-top: 14px; color: var(--muted); font-size: 13px; text-align: center; max-width: 520px; }
@@ -137,12 +138,12 @@
 
   <div class="players">
     <div class="player" id="p1">
-      <div class="stone black"></div>
+      <div class="stone p1"></div>
       <input id="name1" maxlength="10">
       <div class="score" id="score1">0</div>
     </div>
     <div class="player" id="p2">
-      <div class="stone white"></div>
+      <div class="stone p2"></div>
       <input id="name2" maxlength="10">
       <div class="score" id="score2">0</div>
     </div>
@@ -177,11 +178,11 @@ const $ = (id) => document.getElementById(id);
 
 const I18N = {
   en: {
-    title: "Gomoku", subtitle: "Five in a Row", black: "Black", white: "White", you: "You", bot: "Bot",
+    title: "Gomoku", subtitle: "Five in a Row", black: "White", white: "Blue", you: "You", bot: "Bot",
     onePlayer: "1 Player", twoPlayers: "2 Players", easy: "Easy", medium: "Medium", hard: "Hard",
     undo: "Undo", restart: "Restart", resetScore: "Reset score", again: "Play again", toggle: "中文",
     info2: "Take turns placing stones on the intersections. The first to get five in a row horizontally, vertically or diagonally wins. The loser moves first next game. Click a name to edit it.",
-    info1: "You play black against the bot. Get five in a row horizontally, vertically or diagonally to win. The loser moves first next game. Undo takes back your last move and the bot's reply.",
+    info1: "You play white against the bot. Get five in a row horizontally, vertically or diagonally to win. The loser moves first next game. Undo takes back your last move and the bot's reply.",
     nameLabel: (n) => `${n} player name`,
     turn: (n, k) => `${n} to move · move ${k}`,
     yourTurn: (k) => `Your move · move ${k}`, botTurn: "Bot is thinking…",
@@ -190,21 +191,21 @@ const I18N = {
     winSubBot: (k, a, b, youFirst) => `${k} moves · score ${a} : ${b} · ${youFirst ? "you move" : "the bot moves"} first next game`,
     draw: "Draw", drawSub: "The board is full. Nobody wins.",
     online: "Online", createRoom: "Create a room", or: "or", joinRoom: "Join", codePh: "Room code",
-    lobbyHint: "Create a room and send the link to a friend on another computer. You play black, they play white.",
+    lobbyHint: "Create a room and send the link to a friend on another computer. You play white, they play blue.",
     roomLine: (code, color, st) => `Room ${code} · you are ${color} · ${st === "on" ? "friend connected" : st === "find" ? "connecting…" : "waiting for your friend to open the link"}`,
-    copy: "Copy link", copied: "Copied", leave: "Leave", friend: "Friend", blackWord: "black", whiteWord: "white",
+    copy: "Copy link", copied: "Copied", leave: "Leave", friend: "Friend", blackWord: "white", whiteWord: "blue",
     waitFriend: "Waiting for your friend to join", theirTurn: (n, k) => `Waiting for ${n} · move ${k}`,
     winSubOnline: (k, a, b, f) => `${k} moves · score ${a} : ${b} · ${f} moves first next game`,
-    info3: "Each player uses their own device. The room creator plays black, the friend who opens the link plays white. Undo is off in online games.",
+    info3: "Each player uses their own device. The room creator plays white, the friend who opens the link plays blue. Undo is off in online games.",
     badCode: "Enter the 6-character room code your friend sent you.",
     connectErr: "Couldn't reach the connection server. Check your internet connection and try again.",
   },
   zh: {
-    title: "五子棋", subtitle: "Gomoku", black: "黑方", white: "白方", you: "你", bot: "电脑",
+    title: "五子棋", subtitle: "Gomoku", black: "白方", white: "蓝方", you: "你", bot: "电脑",
     onePlayer: "单人", twoPlayers: "双人", easy: "简单", medium: "中等", hard: "困难",
     undo: "悔棋", restart: "重新开始", resetScore: "清空比分", again: "再来一局", toggle: "EN",
     info2: "两人轮流在交叉点落子，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。点击名字可以修改。",
-    info1: "你执黑与电脑对弈，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。悔棋会同时撤回你和电脑的上一步。",
+    info1: "你执白与电脑对弈，先在横、竖或斜线上连成五子者获胜。每局结束后由输的一方先手。悔棋会同时撤回你和电脑的上一步。",
     nameLabel: (n) => `${n}名字`,
     turn: (n, k) => `轮到 ${n} 落子 · 第 ${k} 手`,
     yourTurn: (k) => `轮到你落子 · 第 ${k} 手`, botTurn: "电脑思考中…",
@@ -213,12 +214,12 @@ const I18N = {
     winSubBot: (k, a, b, youFirst) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局${youFirst ? "你" : "电脑"}先手`,
     draw: "平局", drawSub: "棋盘下满了，不分胜负",
     online: "联机", createRoom: "创建房间", or: "或", joinRoom: "加入", codePh: "房间号",
-    lobbyHint: "创建房间后把链接发给另一台电脑上的朋友。你执黑，朋友执白。",
+    lobbyHint: "创建房间后把链接发给另一台电脑上的朋友。你执白，朋友执蓝。",
     roomLine: (code, color, st) => `房间 ${code} · 你执${color} · ${st === "on" ? "朋友已连接" : st === "find" ? "正在连接…" : "等待朋友打开链接"}`,
-    copy: "复制链接", copied: "已复制", leave: "离开", friend: "朋友", blackWord: "黑", whiteWord: "白",
+    copy: "复制链接", copied: "已复制", leave: "离开", friend: "朋友", blackWord: "白", whiteWord: "蓝",
     waitFriend: "等待朋友加入", theirTurn: (n, k) => `等待 ${n} 落子 · 第 ${k} 手`,
     winSubOnline: (k, a, b, f) => `共 ${k} 手 · 比分 ${a} : ${b} · 下局 ${f} 先手`,
-    info3: "两人各用自己的设备。创建房间的人执黑，打开链接的朋友执白。联机对局不能悔棋。",
+    info3: "两人各用自己的设备。创建房间的人执白，打开链接的朋友执蓝。联机对局不能悔棋。",
     badCode: "请输入朋友发给你的 6 位房间号。",
     connectErr: "连不上联机服务器，请检查网络后再试。",
   },
@@ -237,7 +238,7 @@ const vsBot = () => mode === "1p";
 const isOnline = () => mode === "online";
 const scoresKey = () => isOnline() ? "gomoku-scores-online-" + (net.room || "") : vsBot() ? "gomoku-scores-bot-" + diff : "gomoku-scores";
 
-// 联机：通过公共 MQTT 服务器（加密 WebSocket）中转。房主执黑，朋友执白
+// 联机：通过公共 MQTT 服务器（加密 WebSocket）中转。房主执白（玩家 1），朋友执蓝（玩家 2）
 const MQTT_JS = "https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js";
 const BROKERS = ["wss://broker.hivemq.com:8884/mqtt", "wss://broker.emqx.io:8084/mqtt"];
 const topicFor = (code) => "gomoku-eh8/room/" + code;
@@ -245,7 +246,7 @@ const net = { room: null, color: 0, client: null, id: "", peerId: null, lastSeen
 net.myName = load("gomoku-online-name", "");
 
 // 默认名字（任何语言里的 黑方/白方/你/电脑）不存，切语言时跟着换
-const DEFAULTS = new Set(Object.values(I18N).flatMap((d) => [d.black, d.white, d.you, d.bot, d.friend]));
+const DEFAULTS = new Set([...Object.values(I18N).flatMap((d) => [d.black, d.white, d.you, d.bot, d.friend]), "Black", "黑方"]);
 const isDefaultName = (v) => !v.trim() || DEFAULTS.has(v.trim());
 
 let board, moves, current, winner, winLine, hover, first = 1, botTimer = null;
@@ -293,7 +294,7 @@ function renderChrome() {
   if ($("overlay").classList.contains("show")) showWin();
 }
 
-// 玩家 1 永远执黑、玩家 2 永远执白；谁先手由 first 决定（输家下局先手）
+// 玩家 1 永远执白、玩家 2 永远执蓝；谁先手由 first 决定（输家下局先手）
 function newGame() {
   clearTimeout(botTimer); botTimer = null;
   board = Array.from({ length: N }, () => Array(N).fill(0));
@@ -339,13 +340,13 @@ function draw() {
   if (hover && canMove() && !board[hover.y][hover.x]) stone(hover.x, hover.y, current, 0.4);
   const last = moves[moves.length - 1];
   if (last && !winLine) {
-    ctx.fillStyle = css("--key"); ctx.strokeStyle = css("--accent"); ctx.lineWidth = Math.max(1.5, cell * 0.04);
-    ctx.beginPath(); ctx.arc(pos(last.x), pos(last.y), cell * 0.13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = css("--accent");
+    ctx.beginPath(); ctx.arc(pos(last.x), pos(last.y), cell * 0.12, 0, Math.PI * 2); ctx.fill();
   }
   if (winLine) {
     const a = winLine[0], b = winLine[winLine.length - 1];
     ctx.lineCap = "round";
-    for (const [color, w] of [[css("--accent"), 0.2], [css("--key"), 0.12]]) {
+    for (const [color, w] of [["#ffffff", 0.2], [css("--accent"), 0.12]]) {
       ctx.strokeStyle = color; ctx.lineWidth = cell * w;
       ctx.beginPath(); ctx.moveTo(pos(a.x), pos(a.y)); ctx.lineTo(pos(b.x), pos(b.y)); ctx.stroke();
     }
@@ -355,10 +356,10 @@ function draw() {
 function stone(x, y, who, alpha) {
   const cx = pos(x), cy = pos(y), r = cell * 0.44;
   ctx.save(); ctx.globalAlpha = alpha;
-  if (alpha === 1) { ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = cell * 0.12; ctx.shadowOffsetY = cell * 0.06; }
+  if (alpha === 1) { ctx.shadowColor = "rgba(80,50,50,.4)"; ctx.shadowBlur = cell * 0.12; ctx.shadowOffsetY = cell * 0.06; }
   const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
-  if (who === 1) { g.addColorStop(0, "#6a6a6a"); g.addColorStop(1, "#0d0d0d"); }
-  else { g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#cfc9bf"); }
+  if (who === 1) { g.addColorStop(0, "#ffffff"); g.addColorStop(1, "#e6dbdc"); }        // 白
+  else { g.addColorStop(0, "#e3f6f8"); g.addColorStop(0.55, "#A5DEE4"); g.addColorStop(1, "#80c2cb"); }  // #A5DEE4
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
@@ -535,7 +536,7 @@ function winText() {
 
 function showWin() {
   if (winner > 0) {
-    $("winStone").className = "stone " + (winner === 1 ? "black" : "white");
+    $("winStone").className = "stone " + (winner === 1 ? "p1" : "p2");
     $("winStone").hidden = false;
     $("winText").textContent = winText();
     $("winSub").textContent = isOnline() ? t.winSubOnline(moves.length, scores[1], scores[2], name(first))

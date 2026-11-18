@@ -8,8 +8,8 @@ Or open `index.html` locally.
 
 ## Features
 - 1 Player: play against a bot, with Easy / Medium / Hard difficulty
-- 2 Players: black vs. white on the same device
-- Online: create a room and send the link to a friend; you play black on your computer, they play white on theirs
+- 2 Players: white vs. blue on the same device
+- Online: create a room and send the link to a friend; you play white on your computer, they play blue on theirs
 - 15 × 15 board
 - Win detection in all four directions, with the winning line highlighted
 - Undo (button or ⌘/Ctrl+Z), restart, and a running score saved in the browser
